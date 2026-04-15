@@ -16,6 +16,13 @@ public class WorldConfig {
             save(new ArrayList<>());
             WorldLoader.LOGGER.info("Created default worldloader.json config");
         }
+
+        try {
+            Files.createDirectories(Path.of(".", "worlds"));
+            WorldLoader.LOGGER.info("Worlds directory ready.");
+        } catch (Exception e) {
+            WorldLoader.LOGGER.error("Failed to create worlds directory: " + e.getMessage());
+        }
     }
 
     public static List<String> getAutoLoadWorlds() {
