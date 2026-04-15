@@ -2,6 +2,7 @@ package com.joyxz;
 
 import com.joyxz.commands.WorldLoaderCommand;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.resources.Identifier;
 import xyz.nucleoid.fantasy.Fantasy;
@@ -47,6 +48,24 @@ public class WorldLoader implements ModInitializer {
         }
     }
 
+    private void onPlayerChangeWorld(net.minecraft.server.level.ServerPlayer player, net.minecraft.server.level.ServerLevel origin, net.minecraft.server.level.ServerLevel destination) {
+        String worldName = origin.dimension().toString()
+                .replaceAll("ResourceKey\\[minecraft:dimension / minecraft:", "")
+                .replace("]", "");
+
+        if (!worldName.equals("the_nether") && !worldName.equals("the_end")) {
+            PlayerPositions.savePosition(
+                    player.getUUID(),
+                    worldName,
+                    player.getX(),
+                    player.getY(),
+                    player.getZ(),
+                    player.getYRot(),
+                    player.getXRot()
+            );
+        }
+    }
+
     @Override
     public void onInitialize() {
         ServerLifecycleEvents.SERVER_STARTED.register(this::autoLoadWorlds);
@@ -54,6 +73,8 @@ public class WorldLoader implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             WorldLoaderCommand.register(dispatcher);
         });
+
+        ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(this::onPlayerChangeWorld);
 
         WorldConfig.init();
     }

@@ -1,5 +1,6 @@
 package com.joyxz.commands;
 
+import com.joyxz.PlayerPositions;
 import com.joyxz.WorldConfig;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
@@ -154,7 +155,15 @@ public class WorldLoaderCommand {
                                                             }
 
                                                             ServerPlayer player = context.getSource().getPlayerOrException();
-                                                            player.teleportTo(level, 0.0, 64.0, 0.0, java.util.Set.of(), player.getYRot(), player.getXRot(), true);
+                                                            double[] pos = PlayerPositions.getPosition(player.getUUID(), worldName);
+
+                                                            if (pos != null) {
+                                                                player.teleportTo(level, pos[0], pos[1], pos[2], java.util.Set.of(), (float) pos[3], (float) pos[4], true);
+                                                            }
+
+                                                            else {
+                                                                player.teleportTo(level, 0.0, 64.0, 0.0, java.util.Set.of(), player.getYRot(), player.getXRot(), true);
+                                                            }
 
                                                             context.getSource().sendSuccess(
                                                                     () -> Component.literal("Teleporting to '" + worldName + "'."), false
