@@ -25,7 +25,6 @@ public class WorldLoaderCommand {
                         .then(
                                 Commands.literal("list")
                                         .executes(context -> {
-                                            MinecraftServer server = context.getSource().getServer();
                                             File serverDir = new File(new File(".").getAbsolutePath());
                                             File[] folders = serverDir.listFiles(File::isDirectory);
 
@@ -171,7 +170,11 @@ public class WorldLoaderCommand {
         );
     }
 
+    // Checks of dimension path exists and if not, creates it and copies the file.
     public static void copyFolder(java.nio.file.Path source, java.nio.file.Path target) throws java.io.IOException {
+        if (!java.nio.file.Files.exists(target)) {
+            java.nio.file.Files.createDirectories(target);
+        }
         try (var stream = java.nio.file.Files.walk(source)) {
             stream.forEach(src -> {
                 try {
