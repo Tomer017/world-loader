@@ -25,12 +25,20 @@ public class WorldLoaderCommand {
                         .then(
                                 Commands.literal("list")
                                         .executes(context -> {
-                                            File serverDir = new File(new File(".").getAbsolutePath());
+                                            File serverDir = new File(".", "worlds");
+
+                                            if (!serverDir.exists()) {
+                                                context.getSource().sendSuccess(
+                                                        () -> Component.literal("No worlds directory found."), false
+                                                );
+                                                return 0;
+                                            }
+
                                             File[] folders = serverDir.listFiles(File::isDirectory);
 
                                             if (folders == null) {
                                                 context.getSource().sendSuccess(
-                                                        () -> Component.literal("Error: could not read server directory"), false
+                                                        () -> Component.literal("Error: could not read worlds directory"), false
                                                 );
                                                 return 0;
                                             }
@@ -54,8 +62,8 @@ public class WorldLoaderCommand {
                                         .then(
                                                 Commands.argument("worldName", StringArgumentType.greedyString())
                                                         .suggests((context, builder) -> {
-                                                            File serverDir = new File(".").getAbsoluteFile();
-                                                            File[] folders = serverDir.listFiles(File::isDirectory);
+                                                            File worldsDir = new File(".", "worlds");
+                                                            File[] folders = worldsDir.listFiles(File::isDirectory);
                                                             if (folders != null) {
                                                                 for (File folder : folders) {
                                                                     if (new File(folder, "level.dat").exists()) {
@@ -69,7 +77,7 @@ public class WorldLoaderCommand {
                                                             String worldName = StringArgumentType.getString(context, "worldName");
                                                             net.minecraft.server.MinecraftServer server = context.getSource().getServer();
 
-                                                            File worldFolder = new File(".", worldName);
+                                                            File worldFolder = new File(".", "worlds/" + worldName);
                                                             if (!worldFolder.exists() || !new File(worldFolder, "level.dat").exists()) {
                                                                 context.getSource().sendSuccess(
                                                                         () -> Component.literal("World '" + worldName + "' not found or invalid."), false
@@ -77,7 +85,7 @@ public class WorldLoaderCommand {
                                                                 return 0;
                                                             }
 
-                                                            File source = new File(".", worldName);
+                                                            File source = new File(".", "worlds/" + worldName);
                                                             File target = new File(".", "world/dimensions/minecraft/" + worldName);
 
                                                             if (!target.exists()) {
@@ -170,11 +178,10 @@ public class WorldLoaderCommand {
         );
     }
 
-    // Checks of dimension path exists and if not, creates it and copies the file.
+    // Checks if dimension path exists and if not, creates it and copies the files.
     public static void copyFolder(java.nio.file.Path source, java.nio.file.Path target) throws java.io.IOException {
-        if (!java.nio.file.Files.exists(target)) {
-            java.nio.file.Files.createDirectories(target);
-        }
+        java.nio.file.Files.createDirectories(target);
+
         try (var stream = java.nio.file.Files.walk(source)) {
             stream.forEach(src -> {
                 try {
