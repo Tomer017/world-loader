@@ -196,7 +196,7 @@ public class WorldLoaderCommand {
                                                         .suggests((context, builder) -> {
                                                             for (ServerLevel l : context.getSource().getServer().getAllLevels()) {
                                                                 String key = l.dimension().toString();
-                                                                if (!key.contains("overworld") && !key.contains("the_nether") && !key.contains("the_end")) {
+                                                                if (!key.contains("the_nether") && !key.contains("the_end")) {
                                                                     builder.suggest(l.dimension().toString()
                                                                             .replaceAll("ResourceKey\\[minecraft:dimension / minecraft:", "")
                                                                             .replace("]", ""));
