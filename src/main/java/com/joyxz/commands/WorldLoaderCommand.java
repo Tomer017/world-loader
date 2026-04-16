@@ -11,14 +11,24 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import xyz.nucleoid.fantasy.Fantasy;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
+import xyz.nucleoid.fantasy.RuntimeWorldHandle;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WorldLoaderCommand {
+
+    private static final Map<String, RuntimeWorldHandle> worldHandles = new HashMap<>();
+
+    public static void storeHandle(String worldName, RuntimeWorldHandle handle) {
+        worldHandles.put(worldName, handle);
+    }
+
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
                 Commands.literal("wl")
@@ -109,11 +119,70 @@ public class WorldLoaderCommand {
                                                                     .setGenerator(server.getLevel(Level.OVERWORLD).getChunkSource().getGenerator())
                                                                     .setSeed(server.getLevel(Level.OVERWORLD).getSeed());
 
-                                                            fantasy.getOrOpenPersistentWorld(Identifier.parse(worldName), config);
+                                                            RuntimeWorldHandle handle = fantasy.getOrOpenPersistentWorld(Identifier.parse(worldName), config);
+                                                            worldHandles.put(worldName, handle);
                                                             WorldConfig.addWorld(worldName);
 
                                                             context.getSource().sendSuccess(
                                                                     () -> Component.literal("World '" + worldName + "' loaded!"), false
+                                                            );
+
+                                                            return 1;
+                                                        })
+                                        )
+                        )
+                        .then(
+                                Commands.literal("unload")
+                                        .then(
+                                                Commands.argument("worldName", StringArgumentType.greedyString())
+                                                        .suggests((context, builder) -> {
+                                                            for (ServerLevel l : context.getSource().getServer().getAllLevels()) {
+                                                                String key = l.dimension().toString();
+                                                                if (!key.contains("overworld") && !key.contains("the_nether") && !key.contains("the_end")) {
+                                                                    builder.suggest(l.dimension().toString()
+                                                                            .replaceAll("ResourceKey\\[minecraft:dimension / minecraft:", "")
+                                                                            .replace("]", ""));
+                                                                }
+                                                            }
+                                                            return builder.buildFuture();
+                                                        })
+                                                        .executes(context -> {
+                                                            String worldName = StringArgumentType.getString(context, "worldName");
+                                                            net.minecraft.server.MinecraftServer server = context.getSource().getServer();
+
+                                                            ServerLevel level = null;
+                                                            for (ServerLevel l : server.getAllLevels()) {
+                                                                if (l.dimension().toString().equals("ResourceKey[minecraft:dimension / minecraft:" + worldName + "]")) {
+                                                                    level = l;
+                                                                    break;
+                                                                }
+                                                            }
+
+                                                            if (level == null) {
+                                                                context.getSource().sendSuccess(
+                                                                        () -> Component.literal("World '" + worldName + "' is not loaded."), false
+                                                                );
+                                                                return 0;
+                                                            }
+
+                                                            // Teleport any players in this world back to the overworld
+                                                            ServerLevel overworld = server.getLevel(Level.OVERWORLD);
+                                                            for (ServerPlayer p : level.players()) {
+                                                                p.teleportTo(overworld, 0.0, 64.0, 0.0, java.util.Set.of(), p.getYRot(), p.getXRot(), true);
+                                                            }
+
+                                                            // Unload via Fantasy handle
+                                                            RuntimeWorldHandle handle = worldHandles.get(worldName);
+                                                            if (handle != null) {
+                                                                handle.delete();
+                                                                worldHandles.remove(worldName);
+                                                            }
+
+                                                            // Remove from auto-load
+                                                            WorldConfig.removeWorld(worldName);
+
+                                                            context.getSource().sendSuccess(
+                                                                    () -> Component.literal("World '" + worldName + "' unloaded."), false
                                                             );
 
                                                             return 1;
@@ -159,9 +228,7 @@ public class WorldLoaderCommand {
 
                                                             if (pos != null) {
                                                                 player.teleportTo(level, pos[0], pos[1], pos[2], java.util.Set.of(), (float) pos[3], (float) pos[4], true);
-                                                            }
-
-                                                            else {
+                                                            } else {
                                                                 player.teleportTo(level, 0.0, 64.0, 0.0, java.util.Set.of(), player.getYRot(), player.getXRot(), true);
                                                             }
 
@@ -187,7 +254,6 @@ public class WorldLoaderCommand {
         );
     }
 
-    // Checks if dimension path exists and if not, creates it and copies the files.
     public static void copyFolder(java.nio.file.Path source, java.nio.file.Path target) throws java.io.IOException {
         java.nio.file.Files.createDirectories(target);
 

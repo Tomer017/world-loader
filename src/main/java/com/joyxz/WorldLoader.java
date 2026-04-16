@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.resources.Identifier;
 import xyz.nucleoid.fantasy.Fantasy;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
+import xyz.nucleoid.fantasy.RuntimeWorldHandle;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import net.minecraft.world.level.Level;
 import java.io.File;
@@ -40,7 +41,8 @@ public class WorldLoader implements ModInitializer {
                         .setGenerator(server.getLevel(Level.OVERWORLD).getChunkSource().getGenerator())
                         .setSeed(server.getLevel(Level.OVERWORLD).getSeed());
 
-                fantasy.getOrOpenPersistentWorld(Identifier.parse(worldName), config);
+                RuntimeWorldHandle handle = fantasy.getOrOpenPersistentWorld(Identifier.parse(worldName), config);
+                WorldLoaderCommand.storeHandle(worldName, handle);
                 WorldLoader.LOGGER.info("Auto-loaded world: " + worldName);
             } catch (Exception e) {
                 WorldLoader.LOGGER.error("Failed to auto-load world " + worldName + ": " + e.getMessage());
